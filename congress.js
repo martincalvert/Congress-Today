@@ -26,7 +26,7 @@ const handlers = {
         }
     },
     'AskZipCodeIntent': function () {
-      this.emit(':ask', 'What is your zip code')
+      this.emit(':ask', 'What is your zip code, so I can look up your represenatives')
     },
     'StoreZipCodeIntent': function () {
       if (this.event.request.intent.slots.zip.value){
@@ -44,7 +44,6 @@ const handlers = {
     },
     'HouseRepIntent': function () {
         var ret = ''
-        console.log(this.attributes)
         this.attributes['reps'].house.forEach(function(value, index){
           if (ret.length > 0){
             ret = ret + ' and ' + value
@@ -52,7 +51,7 @@ const handlers = {
             ret = value
           }
         })
-        this.emit(':tell', 'Your house represenative is ' + ret);
+        this.emit(':ask', 'Your house represenative is ' + ret + ' , if you want to know your house senate, just say senate');
     },
     'SenateRepIntent': function () {
       var ret = ''
@@ -63,7 +62,7 @@ const handlers = {
           ret = value
         }
       })
-      this.emit(':tell', 'Your senate represenatives are ' + ret);
+      this.emit(':ask', 'Your senate represenatives are ' + ret + ' , if you want to know your house represenatives, just say house');
     },
     'AMAZON.HelpIntent': function () {
         const speechOutput = this.t('HELP_MESSAGE');
@@ -74,7 +73,7 @@ const handlers = {
         this.emit(':tell', this.t('STOP_MESSAGE'));
     },
     'AMAZON.StopIntent': function () {
-        this.emit(':tell', this.t('STOP_MESSAGE'));
+        this.emit(':tell', 'Have a nice day');
     },
     'SessionEndedRequest': function () {
         this.emit(':tell', this.t('STOP_MESSAGE'));
