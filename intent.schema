@@ -1,0 +1,31 @@
+{
+  "intents": [
+    {
+      "intent": "HouseRepIntent"
+    },
+    {
+      "intent": "SenateRepIntent"
+    },
+    {
+      "slots": [
+        {
+          "name": "zip",
+          "type": "AMAZON.NUMBER"
+        }
+      ],
+      "intent": "StoreZipCodeIntent"
+    },
+    {
+      "intent": "AMAZON.HelpIntent"
+    },
+    {
+      "intent": "AMAZON.StopIntent"
+    },
+    {
+      "intent": "AMAZON.CancelIntent"
+    },
+    {
+      "intent": "StartIntent"
+    }
+  ]
+}

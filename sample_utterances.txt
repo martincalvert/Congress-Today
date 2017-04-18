@@ -1,0 +1,9 @@
+HouseRepIntent house
+HouseRepIntent who is my house represenative
+SenateRepIntent senate
+SenateRepIntent who is my senate represenative
+StoreZipCodeIntent {zip} is my zip code
+AMAZON.HelpIntent help
+AMAZON.StopIntent stop
+AMAZON.CancelIntent cancel
+StartIntent hello

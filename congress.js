@@ -31,11 +31,10 @@ const handlers = {
     'StoreZipCodeIntent': function () {
       if (this.event.request.intent.slots.zip.value){
         this.attributes['zip'] = this.event.request.intent.slots.zip.value;
-        this.attributes['reps'] = fetchReps(this.attributes['zip'], (results) => {
-                console.log(results)
-                return results;
-            });
-        this.emit('WhichChamberIntent');
+        fetchReps(this.attributes['zip'], (results) => {
+            this.attributes['reps'] = results
+            this.emit('WhichChamberIntent');
+        });
       } else {
           this.emit('AskZipCodeIntent')
       }
@@ -45,6 +44,7 @@ const handlers = {
     },
     'HouseRepIntent': function () {
         var ret = ''
+        console.log(this.attributes)
         this.attributes['reps'].house.forEach(function(value, index){
           if (ret.length > 0){
             ret = ret + ' and ' + value
@@ -56,8 +56,6 @@ const handlers = {
     },
     'SenateRepIntent': function () {
       var ret = ''
-      console.log(this.attributes['reps'])
-      console.log(this.attributes)
       this.attributes['reps'].senate.forEach(function(value, index){
         if (ret.length > 0){
           ret = ret + ' and ' + value
@@ -88,7 +86,7 @@ var https = require('https');
 function fetchReps(zip, callback){
   var options = {
     host: 'www.googleapis.com',
-    path: '/civicinfo/v2/representatives?key=**keyhere**&address=' + String(zip),
+    path: '/civicinfo/v2/representatives?key=**key**&address=' + String(zip),
     method: 'GET',
     headers: {
       'Content-Type': 'application/json'
@@ -120,7 +118,7 @@ function fetchReps(zip, callback){
     })
   });
 
-  req.end()
+  req.end();
 }
 
 exports.handler = (event, context) => {
