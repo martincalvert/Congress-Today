@@ -85,7 +85,7 @@ var https = require('https');
 function fetchReps(zip, callback){
   var options = {
     host: 'www.googleapis.com',
-    path: '/civicinfo/v2/representatives?key=**key**&address=' + String(zip),
+    path: '/civicinfo/v2/representatives?key=' + process.env.key + '&address=' + String(zip),
     method: 'GET',
     headers: {
       'Content-Type': 'application/json'
@@ -102,6 +102,15 @@ function fetchReps(zip, callback){
         var json = JSON.parse(retData);
         var senateIndices = json.offices[2].officialIndices;
         var houseIndices = json.offices[3].officialIndices;
+
+        json.offices.forEach(function(value, index){
+          if (value.name == 'United States Senate'){
+            senateIndices = value.officialIndices
+          }
+          if (value.name.starsWith('United States House of Representatives')){
+            houseIndices = value.houseIndices
+          }
+        })
 
         ret['senate'] = []
         senateIndices.forEach(function(value, index){
