@@ -11,58 +11,29 @@
 'use strict';
 
 const Alexa = require('alexa-sdk');
-
 const APP_ID = undefined;  // TODO replace with your app ID (OPTIONAL).
+var https = require('https');
 
 const handlers = {
     'LaunchRequest': function () {
-        this.emit('StartIntent');
+      this.emit('StartIntent');
     },
     'StartIntent': function () {
-        if (this.attributes['zip']){
-            this.emit('WhichChamberIntent');
-        } else {
-          this.emit('AskZipCodeIntent');
-        }
+      this.emit(':ask', 'What would you like to know? You can ask about senate bills, house bills, or your represenatives.')
     },
-    'AskZipCodeIntent': function () {
-      this.emit(':ask', 'What is your zip code, so I can look up your represenatives')
-    },
-    'StoreZipCodeIntent': function () {
-      if (this.event.request.intent.slots.zip.value){
-        this.attributes['zip'] = this.event.request.intent.slots.zip.value;
-        fetchReps(this.attributes['zip'], (results) => {
-            this.attributes['reps'] = results
-            this.emit('WhichChamberIntent');
-        });
-      } else {
-          this.emit('AskZipCodeIntent')
-      }
-    },
-    'WhichChamberIntent': function(){
-      this.emit(':ask', 'Would you like to know your house or senate represenatives?')
-    },
-    'HouseRepIntent': function () {
-        var ret = ''
-        this.attributes['reps'].house.forEach(function(value, index){
-          if (ret.length > 0){
-            ret = ret + ' and ' + value
-          } else {
-            ret = value
-          }
+    'CongressBillsIntent': function() {
+      const chamber = this.event.request.intent.slots.chamber.value
+      fetchBills(chamber, (results) => {
+        const theResults = results;
+        var response = `Upcoming ${chamber} bills are: `;
+        theResults.forEach(result => {
+          response = `${response} ${result.name} ${result.description}`
         })
-        this.emit(':ask', 'Your house represenative is ' + ret + ' , if you want to know your house senate, just say senate');
-    },
-    'SenateRepIntent': function () {
-      var ret = ''
-      this.attributes['reps'].senate.forEach(function(value, index){
-        if (ret.length > 0){
-          ret = ret + ' and ' + value
-        } else {
-          ret = value
-        }
+        this.emit(':tell', response)
       })
-      this.emit(':ask', 'Your senate represenatives are ' + ret + ' , if you want to know your house represenatives, just say house');
+    },
+	  'Unhandled': function () {
+        this.emit(':ask', 'What would you like to know? You can ask about senate bills, house bills, or your represenatives.');
     },
     'AMAZON.HelpIntent': function () {
         const speechOutput = this.t('HELP_MESSAGE');
@@ -80,53 +51,133 @@ const handlers = {
     },
 };
 
-var https = require('https');
+// function fetchReps(zip, callback){
+//   var options = {
+//     host: 'www.googleapis.com',
+//     path: '/civicinfo/v2/representatives?key=' + process.env.key + '&address=' + String(zip),
+//     method: 'GET',
+//     headers: {
+//       'Content-Type': 'application/json'
+//     }
+//   };
+//   var retData = '';
+//   var ret = {};
+//   var req = https.request(options, res => {
+//     res.on('data', chunk => {
+//       retData = retData + chunk;
+//     });
+//
+//     res.on('end', () => {
+//         var json = JSON.parse(retData);
+//         var senateIndices = json.offices[2].officialIndices;
+//         var houseIndices = json.offices[3].officialIndices;
+//
+//         json.offices.forEach(function(value, index){
+//           if (value.name == 'United States Senate'){
+//             senateIndices = value.officialIndices
+//           }
+//           if (value.name.starsWith('United States House of Representatives')){
+//             houseIndices = value.houseIndices
+//           }
+//         })
+//
+//         ret['senate'] = []
+//         senateIndices.forEach(function(value, index){
+//             ret['senate'].push(json.officials[value].name)
+//         })
+//
+//         ret['house'] = []
+//         houseIndices.forEach(function(value, index){
+//             ret['house'].push(json.officials[value].name)
+//         })
+//
+//         callback(ret);
+//     })
+//   });
+//
+//   req.end();
+// }
 
-function fetchReps(zip, callback){
+function fetchBills(chamber, callback) {
   var options = {
-    host: 'www.googleapis.com',
-    path: '/civicinfo/v2/representatives?key=' + process.env.key + '&address=' + String(zip),
+    host: 'api.propublica.org',
+    path: `/congress/v1/bills/upcoming/${chamber}.json`,
     method: 'GET',
     headers: {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      'X-API-KEY': process.env.PROPUBLICA_KEY
     }
   };
+
   var retData = '';
   var ret = {};
-  var req = https.request(options, res => {
+  var req = https.get(options, res => {
     res.on('data', chunk => {
       retData = retData + chunk;
     });
 
     res.on('end', () => {
-        var json = JSON.parse(retData);
-        var senateIndices = json.offices[2].officialIndices;
-        var houseIndices = json.offices[3].officialIndices;
+      var json = JSON.parse(retData);
 
-        json.offices.forEach(function(value, index){
-          if (value.name == 'United States Senate'){
-            senateIndices = value.officialIndices
-          }
-          if (value.name.starsWith('United States House of Representatives')){
-            houseIndices = value.houseIndices
-          }
+      var bills = []
+
+      var date = new Date()
+
+      var dateString = `${date.getFullYear()}-0${date.getMonth()}-${date.getDay()}`
+
+      var dateBills = json.results.find(day => {
+        return day.date == dateString
+      })
+
+      if (dateBills === undefined) {
+        dateBills = json.results[0]
+      }
+
+      // var bills = handleBills(dateBills);
+      dateBills.bills.forEach(async (item, index) => {
+        // if (index > 2) {
+        //   callback(bills)
+        // }
+        await fetchBill(item.bill_slug).then(results => {
+          var temp = {
+            name: results.bill.replace(/./g, ' '),
+            description: results.short_title
+          };
+          bills.push(temp);
         })
+      })
 
-        ret['senate'] = []
-        senateIndices.forEach(function(value, index){
-            ret['senate'].push(json.officials[value].name)
-        })
-
-        ret['house'] = []
-        houseIndices.forEach(function(value, index){
-            ret['house'].push(json.officials[value].name)
-        })
-
-        callback(ret);
+      callback(bills)
     })
-  });
+  })
+}
 
-  req.end();
+function fetchBill(billSlug) {
+  var options = {
+    host: 'api.propublica.org',
+    path: `/congress/v1/115/bills/${billSlug}.json`,
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-API-KEY': process.env.PROPUBLICA_KEY
+    }
+  };
+
+  var retData = '';
+  var ret = {};
+  return new Promise((resolve, reject) => {
+    var req = https.get(options, res => {
+      res.on('data', chunk => {
+        console.log('getting data')
+        retData = retData + chunk;
+      });
+
+      res.on('end', () => {
+        var json = JSON.parse(retData);
+        resolve(json.results[0]);
+      });
+    })
+  })
 }
 
 exports.handler = (event, context) => {
